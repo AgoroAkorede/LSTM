@@ -1,0 +1,23 @@
+function y_k = nn_simple_predict(u_k,Nu,Np,e,update_state)
+    global pH_const;
+    session_net = pH_const.net_simple;
+    y_k = zeros(1, Np);
+    for i = 1:Np
+        if (i == 1)
+            u = u_k(1);
+        elseif (i <= Nu)
+            u = u_k(i);
+        else
+            u = u_k(Nu);
+        end
+        [u_norm, norm_settings] = mapminmax(u);
+        [session_net, y_ki_norm] = predictAndUpdateState(session_net,u_norm);
+        y_ki = mapminmax('reverse' ,y_ki_norm, norm_settings);
+        fprintf('this is the compe %s %s',y_ki_norm, y_ki)
+     
+        y_k(:,i) = y_ki  + e;
+    end
+    if (update_state)
+       pH_const.net_simple = session_net;
+    end
+end
