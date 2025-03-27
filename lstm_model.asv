@@ -1,0 +1,36 @@
+clc;
+
+% Load or generate time-series data
+% 
+data = load('pH_system_data.mat');
+
+% Prepare sequences for LSTM
+
+layerNumber = 50;
+
+% Define te LSTM newtork
+layers = [
+    sequenceInputLayer(3)
+    lstmLayer(layerNumber*2 ...
+    , 'OutputMode', 'sequence') % 100 LSTM units
+      lstmLayer(layerNumber, 'OutputMode', 'sequence')  % Second LSTM layer (50 units)
+    lstmLayer(layerNumber/2, 'OutputMode', 'sequence') % Third LSTM layer (50 units)
+    fullyConnectedLayer(1) % Output Layer
+    regressionLayer];
+
+options = trainingOptions('adam', ...
+    'MaxEpochs', 3e3, ...
+    'MiniBatchSize', 32, ...
+    'GradientThreshold',1,...
+    'Shuffle', 'every-epoch', ...
+    'InitialLearnRate',5e-2,...
+    'ValidationData', {XTest, YTest},...
+    'Plots', 'training-progress');
+
+net = trainNetwork(XTrain, YTrain, layers, options);
+
+save("lstm_model.mat",'net')
+YPredict = predict(net, XTest);
+% 
+% plot(YPredict, 'k'), hold
+% plot(outputs, 'r-*'), 
