@@ -10,7 +10,10 @@ function y_k = nn_simple_predict(u_k,Nu,Np,e,update_state)
         else
             u = u_k(Nu);
         end
-        [session_net, y_ki] = predictAndUpdateState(session_net,u);
+        session_u = prepare_input_data(u,pH_const.norm_settings,pH_const.seq_length);
+        % fprintf('This is the flow rate : %s === This is the prepared flow rate : %s \n',u,session_u)
+        [session_net, y_ki] = predictAndUpdateState(session_net,session_u);
+%         [session_net, y_ki] = predictAndUpdateState(session_net,u);
         y_k(:,i) = y_ki  + e;
     end
     if (update_state)
