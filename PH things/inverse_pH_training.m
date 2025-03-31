@@ -3,7 +3,8 @@ clear;
 
 % Load datasets
 load('training_data');
-inverse_model_filename = "inverse_ph_model.mat";
+base_model=  "inverse_ph_model.mat";
+inverse_model_filename =format_model_name(base_model, true);
 
 % Check for existing inverse model
 if exist(inverse_model_filename, 'file') == 1
@@ -28,16 +29,16 @@ else
     input_features = 1;
     output_features = 1;
 
-    num_of_hidden_units = 100;
+    num_of_hidden_units = 128;
 
     % Inverse response network architecture
     inverse_network_layers = [...  
         sequenceInputLayer(input_features) % SISO system requires Single Input Single Output
-        lstmLayer(100, 'OutputMode', 'sequence', 'StateActivationFunction', 'tanh', 'GateActivationFunction', 'sigmoid') 
+        lstmLayer(num_of_hidden_units, 'OutputMode', 'sequence', 'StateActivationFunction', 'tanh', 'GateActivationFunction', 'sigmoid') 
         dropoutLayer(0.3) % Prevents Overfitting
-        lstmLayer(100)
-        lstmLayer(100)
-        fullyConnectedLayer(50)
+        lstmLayer(num_of_hidden_units)
+        lstmLayer(num_of_hidden_units)
+        fullyConnectedLayer(num_of_hidden_units/2)
         reluLayer()
         fullyConnectedLayer(output_features)
         regressionLayer
@@ -47,11 +48,12 @@ else
     inverse_training_config = trainingOptions('adam', ...
         'MaxEpochs', 5000, ...
         'MiniBatchSize', 64, ...
-        'GradientThreshold', 1.5, ...
-        'InitialLearnRate', 0.01, ...
+        'GradientThreshold', 1.25, ... % Gradient clipping
+        'InitialLearnRate', 0.005, ...
         'LearnRateSchedule', 'piecewise', ...
         'LearnRateDropPeriod', 500, ...
         'LearnRateDropFactor', 0.7, ...
+        'L2Regularization',1e-3,...
         'Shuffle', 'every-epoch', ...
         'Plots', 'training-progress', ...
         'ExecutionEnvironment', 'auto', ...
