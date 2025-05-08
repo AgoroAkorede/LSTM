@@ -29,14 +29,15 @@ disp(flow_data(1:num_samples-1)')
     % Network configuration
     input_features = 1;
     output_features = 1;
+    numHiddenUnits = 100;
 
     % Enhanced network architecture
     network_layers = [...
         sequenceInputLayer(input_features)
-        lstmLayer(100, 'OutputMode','sequence', 'StateActivationFunction','tanh', 'GateActivationFunction','sigmoid') 
+        lstmLayer(numHiddenUnits, 'OutputMode','sequence', 'StateActivationFunction','tanh', 'GateActivationFunction','sigmoid') 
         dropoutLayer(0.3) % Prevents Overfitting
-        lstmLayer(100)
-         lstmLayer(100)
+        lstmLayer(numHiddenUnits)
+         lstmLayer(numHiddenUnits)
         fullyConnectedLayer(50)
         reluLayer()
         fullyConnectedLayer(output_features)

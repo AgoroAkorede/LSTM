@@ -1,0 +1,127 @@
+clc;
+clear;
+
+% Load dataset
+load('training_data_simple.mat');
+
+% Extract test data
+q3_test = test_dataset.u.signals(1).values(:,1);
+pH_test = test_dataset.x.signals(3).values(:,1);
+test_data_size = numel(q3_test);
+test_data_u = q3_test(1:test_data_size-1)';
+test_data_y = pH_test(2:end)';
+time = test_dataset.u.time';
+
+% Define network parameters
+net_inputs = 1;
+num_hidden_units = 100;
+
+% Get model
+load('Enhanced_Ph_Modelmat_2055_05_06.mat'); 
+
+function run_lstm_prediction()
+    % Load model and data
+    load('training_data_simple.mat');
+    % Assuming pH_net_simple is available from somewhere
+ 
+    
+    % Extract test data
+    q3_test = test_dataset.u.signals(1).values(:,1);
+    pH_test = test_dataset.x.signals(3).values(:,1);
+    test_data_size = numel(q3_test);
+    test_data_u = q3_test(1:test_data_size-1)';
+    test_data_y = pH_test(2:end)';
+    time = test_dataset.u.time';
+    
+    % Define network parameters
+    net_inputs = 1;
+    num_hidden_units = 10;
+    
+    % Extract model structure
+    layers_info = extract_lstm_layers(pH_net_simple);
+    
+    % Extract weights and biases
+    params = extract_network_parameters(pH_net_simple, layers_info, num_hidden_units);
+    
+    % Run prediction with extracted parameters
+    pH_pred = predict_with_lstm(params, test_data_u, layers_info.num_lstm_layers, num_hidden_units);
+    
+    % Plot results
+    LW = 1.4;
+    figure(1);
+    plot(time(2:end), pH_pred, 'k-', 'LineWidth', LW)
+    hold on
+    plot(time(2:end), test_data_y, 'r--', 'LineWidth', LW)
+    xlabel('Time (s)')
+    ylabel('pH')
+    grid on
+    legend('Predicted', 'Actual')
+    title('LSTM Prediction vs Actual');
+end
+
+% Function to run prediction with LSTM model
+function predictions = predict_with_lstm(params, test_data, num_lstm_layers, num_hidden_units)
+    % Get dimensions
+    [num_features, num_time_steps] = size(test_data);
+    
+    % Initialize hidden and cell states for all LSTM layers
+    h = cell(1, num_lstm_layers);
+    C = cell(1, num_lstm_layers);
+    
+    for i = 1:num_lstm_layers
+        h{i} = zeros(num_hidden_units, 1);
+        C{i} = zeros(num_hidden_units, 1);
+    end
+    
+    % Initialize predictions array
+    predictions = zeros(1, num_time_steps);
+    
+    % Process each time step
+    for t = 1:num_time_steps
+        % Get input at current time step
+        xt = test_data(:, t);
+        
+        % Process through each LSTM layer
+        layer_input = xt;
+        
+        for layer = 1:num_lstm_layers
+            layer_name = sprintf('lstm%d', layer);
+            layer_params = params.(layer_name);
+            
+            % Forget gate
+            f = sigmoid(layer_params.Wf * layer_input + layer_params.Uf * h{layer} + layer_params.bf);
+            
+            % Input gate
+            i = sigmoid(layer_params.Wi * layer_input + layer_params.Ui * h{layer} + layer_params.bi);
+            
+            % Cell candidate
+            C_candidate = tanh(layer_params.Wc * layer_input + layer_params.Uc * h{layer} + layer_params.bc);
+            
+            % Update cell state
+            C{layer} = f .* C{layer} + i .* C_candidate;
+            
+            % Output gate
+            o = sigmoid(layer_params.Wo * layer_input + layer_params.Uo * h{layer} + layer_params.bo);
+            
+            % Update hidden state
+            h{layer} = o .* tanh(C{layer});
+            
+            % Output of this layer becomes input to next layer
+            layer_input = h{layer};
+        end
+        
+        % Final prediction using fully connected layer
+        ypred = params.fc.Wy * h{num_lstm_layers} + params.fc.by;
+        
+        % Store prediction
+        predictions(:, t) = ypred;
+    end
+end
+
+% Sigmoid activation function
+function y = sigmoid(x)
+    y = 1 ./ (1 + exp(-x));
+end
+
+% Run this with do pH prediction
+run_lstm_prediction();
